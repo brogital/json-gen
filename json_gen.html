@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Генерация JSON</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+        }
+        .block {
+            flex: 1;
+            margin: 10px;
+            min-width: 300px;
+        }
+        .block h2 {
+            margin-top: 0;
+        }
+        #jsonForm {
+            display: none;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="submit"],
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="submit"]:hover,
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: auto;
+        }
+        .scenario-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .scenario-list label {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .scenario-list input[type="radio"] {
+            margin-right: 10px;
+        }
+        .scenario-item {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .scenario-item input[type="radio"] {
+            margin-right: 10px;
+        }
+        .scenario-item:hover {
+            background-color: #f0f0f0;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-wrap: wrap;
+            }
+            .block {
+                min-width: 100%;
+            }
+        }
+    </style>
+    <script>
+        const scenarios = {
+            "Не работают оплаты картами | Ввод": {
+                "title": "-",
+                "content": "Оплата картой временно не\u00A0работает\u00A0— пока выбирайте другие способы",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "index,card-status,one-click-index"
+            },
+            "Не работает сбп | Ввод": {
+                "title": "-",
+                "content": "Оплата через\u00A0СБП временно не\u00A0работает\u00A0— пока выбирайте другие способы",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "index,sbp,sbp-bank-list,sbp-status,one-click-index,one-click-sbp-bank-list"
+            },
+            "Ничего не работает | Ввод": {
+                "title": "-",
+                "content": "Оплатить сейчас не\u00A0получится\u00A0— попробуйте чуть позже, скоро всё снова заработает",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "index,sbp,sbp-bank-list,sbp-status,card-status,one-click-index,one-click-sbp-bank-list"
+            },
+            "Неполадки оплаты картами | Ввод": {
+                "title": "",
+                "content": "Неполадки при оплате картой\u00A0— это временно, но пока лучше выбирать другие способы",
+                "type": 1,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "index,card-status,one-click-index"
+            },
+            "Неполадки оплаты СБП | Ввод": {
+                "title": "",
+                "content": "Неполадки при оплате через СБП — это временно, но пока лучше выбирать другие способы",
+                "type": 1,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "index,sbp,sbp-bank-list,sbp-status,one-click-index,one-click-sbp-bank-list"
+            },
+            "Не работает конкретный банк  СБП | Ввод": {
+                "title": "",
+                "content": "Неполадки при оплате через Тинькофф Банк — это временно, но пока лучше выбирать другие способы",
+                "type": 1,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "sbp,sbp-bank-list,sbp-status,one-click-sbp-bank-list"
+            },
+            "не работает вывод сбп | Вывод": {
+                "title": "",
+                "content": "Сейчас недоступен вывод через СБП, пока отправляйте деньги на карту",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "payout-index,payout-sbp-bank-list"
+            },
+            "Не работает вывод карт | Вывод": {
+                "title": "",
+                "content": "Сейчас недоступен вывод на карту, пока отправляйте деньги через СБП",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "payout-index"
+            },
+            "не работает вывод вообще | Вывод": {
+                "title": "",
+                "content": "Сейчас недоступен вывод денег — попробуйте чуть позже, скоро всё снова заработает",
+                "type": 0,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "payout-index,payout-sbp-bank-list"
+            },
+            "Долго отвечаем | Вывод": {
+                "title": "",
+                "content": "Деньги за заказы приходят с задержкой — попробуйте вывести позже, неполадки скоро устранят",
+                "type": 1,
+                "platformIds": [1, 2, 3, 4],
+                "screen": "payout-index,payout-sbp-bank-list"
+            }
+        };
+
+        function populateTemplate() {
+            const scenarioSelect = document.querySelector('input[name="scenario"]:checked').value;
+            if (scenarios[scenarioSelect]) {
+                const scenario = scenarios[scenarioSelect];
+                document.getElementById('title').value = scenario.title || '';
+                document.getElementById('content').value = scenario.content;
+                document.getElementById('type').value = scenario.type;
+                document.getElementById('platform').value = scenario.platformIds.join(',');
+                document.getElementById('screen').value = scenario.screen;
+                document.getElementById('jsonForm').style.display = 'block';
+            } else {
+                document.getElementById('jsonForm').style.display = 'block';
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                document.getElementById('type').value = '';
+                document.getElementById('platform').value = '';
+                document.getElementById('screen').value = '';
+            }
+        }
+
+        function generateRandomId() {
+            return Math.floor(Math.random() * 1000) + 1;
+        }
+
+        function generateJSON() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const type = parseInt(document.getElementById('type').value);
+            const platformIds = document.getElementById('platform').value.split(',').map(Number);
+            const screen = document.getElementById('screen').value.split(',');
+
+            const alertId = generateRandomId(); // генерация случайного значения alertId
+
+            const alertData = {
+                "type": type,
+                "content": content
+            };
+
+            if (title) {
+                alertData.title = title;
+            }
+
+            const json = {
+                "alerts": {
+                    [alertId]: alertData
+                },
+                "screens": {}
+            };
+
+            screen.forEach(scr => {
+                json.screens[scr] = {
+                    "alertId": alertId,
+                    "platformIds": platformIds
+                };
+            });
+
+            document.getElementById('output').textContent = JSON.stringify(json, null, 4);
+            document.getElementById('copyButton').style.display = 'inline'; // Показать кнопку копирования
+        }
+
+        function copyToClipboard() {
+            const jsonOutput = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(jsonOutput).then(() => {
+                alert('JSON скопирован в буфер обмена!');
+            }, (err) => {
+                console.error('Ошибка при копировании: ', err);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const scenarioContainer = document.querySelector('.scenario-list form');
+            const scenariosHtml = Object.keys(scenarios).map((scenario, index) => `
+                <div class="scenario-item">
+                    <input type="radio" id="scenario_${index}" name="scenario" value="${scenario}" onclick="populateTemplate();">
+                    <label for="scenario_${index}">${scenario}</label>
+                </div>
+            `).join('');
+            scenarioContainer.innerHTML += scenariosHtml;
+        });
+    </script>
+</head>
+<body>
+    <h1>Генерация JSON</h1>
+    <div class="container">
+        <div class="block">
+            <h2>Сценарии</h2>
+            <div class="scenario-list">
+                <form>
+                    <div class="scenario-item">
+                        <input type="radio" id="scenario_new" name="scenario" value="new" onclick="populateTemplate();">
+                        <label for="scenario_new">Новый сценарий</label>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="block">
+            <h2>Заполните поля</h2>
+            <form id="jsonForm" onsubmit="generateJSON(); return false;">
+                <label for="title">Title (необязательно):</label><br>
+                <input type="text" id="title" name="title"><br><br>
+
+                <label for="content">Текст баннера:</label><br>
+                <textarea id="content" name="content" rows="4" cols="50" required></textarea><br><br>
+
+                <label for="type">Type:</label><br>
+                <input type="number" id="type" name="type" required><br><br>
+
+                <label for="platform">Platform IDs (через запятую):</label><br>
+                <input type="text" id="platform" name="platform" required><br><br>
+
+                <label for="screen">Screen (через запятую):</label><br>
+                <input type="text" id="screen" name="screen" required><br><br>
+
+                <input type="submit" value="Сгенерировать JSON">
+            </form>
+        </div>
+
+        <div class="block">
+            <h2>Сгенерированный JSON</h2>
+            <pre id="output"></pre>
+            <button id="copyButton" onclick="copyToClipboard()" style="display:none;">Скопировать JSON</button>
+        </div>
+    </div>
+</body>
+</html>
